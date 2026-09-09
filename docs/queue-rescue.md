@@ -4,6 +4,8 @@
 
 The script:
 
+- restores healthy qBittorrent queue, connection, and speed-limit settings;
+- disables qBittorrent alternate speed-limit mode if it is active;
 - promotes recent Sonarr/Radarr releases to top qBittorrent priority;
 - detects stalled torrent queue groups;
 - removes failed/stale downloads from the client;
@@ -21,4 +23,3 @@ Defaults are conservative and can be overridden in the cron file:
 - Radarr old backlog threshold: 48 hours
 
 The script uses actual Sonarr air dates and Radarr release dates for recent-release prioritization, not the time the item was added to the downloader.
-

@@ -26,10 +26,12 @@ from pathlib import Path
 from typing import Any
 
 
+CONFIG_DIR = Path(os.environ.get("SEERR_RESCUE_CONFIG_DIR", "/srv/media-stack/config"))
+
 APPS = {
     "sonarr": {
         "port": 8989,
-        "config": Path("/srv/media-stack/config/sonarr/config.xml"),
+        "config": CONFIG_DIR / "sonarr/config.xml",
         "queue_path": "/api/v3/queue?page=1&pageSize=1000&includeUnknownSeriesItems=true",
         "search_command": "EpisodeSearch",
         "search_key": "episodeIds",
@@ -45,7 +47,7 @@ APPS = {
     },
     "radarr": {
         "port": 7878,
-        "config": Path("/srv/media-stack/config/radarr/config.xml"),
+        "config": CONFIG_DIR / "radarr/config.xml",
         "queue_path": "/api/v3/queue?page=1&pageSize=1000&includeMovie=true",
         "search_command": "MoviesSearch",
         "search_key": "movieIds",
@@ -72,6 +74,23 @@ STALE_TERMS = (
 
 UNSAFE_FILE_RE = re.compile(r"(^|[\s/\\])[^/\\]+\.exe($|[\s/\\])", re.IGNORECASE)
 
+QBIT_PREFS = {
+    "queueing_enabled": True,
+    "dont_count_slow_torrents": True,
+    "max_active_downloads": 8,
+    "max_active_torrents": 20,
+    "max_active_uploads": 8,
+    "max_connec": 1500,
+    "max_connec_per_torrent": 100,
+    "max_uploads": 60,
+    "max_uploads_per_torrent": 8,
+    "scheduler_enabled": False,
+    "dl_limit": 0,
+    "up_limit": 1048576,
+    "alt_dl_limit": 0,
+    "alt_up_limit": 131072,
+}
+
 EPISODE_CACHE: dict[int, dict[str, Any]] = {}
 
 
@@ -91,7 +110,7 @@ def api_key(config_path: Path) -> str:
 
 
 def qbit_api_key() -> str:
-    config = Path("/srv/media-stack/config/qbittorrent/qBittorrent/qBittorrent.conf")
+    config = CONFIG_DIR / "qbittorrent/qBittorrent/qBittorrent.conf"
     for line in config.read_text().splitlines():
         if line.startswith("WebUI\\APIKey="):
             return line.split("=", 1)[1].strip()
@@ -116,6 +135,60 @@ def request(app: str, method: str, path: str, body: dict[str, Any] | None = None
     if not payload:
         return None
     return json.loads(payload)
+
+
+def qbit_post_json(path: str, payload: dict[str, Any]) -> None:
+    body = urllib.parse.urlencode({"json": json.dumps(payload)}).encode()
+    req = urllib.request.Request(
+        f"http://127.0.0.1:8081{path}",
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {qbit_api_key()}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as response:
+        response.read()
+
+
+def qbit_text(path: str) -> str:
+    req = urllib.request.Request(
+        f"http://127.0.0.1:8081{path}",
+        method="GET",
+        headers={"Authorization": f"Bearer {qbit_api_key()}"},
+    )
+    with urllib.request.urlopen(req, timeout=30) as response:
+        return response.read().decode().strip()
+
+
+def ensure_qbit_preferences(dry_run: bool) -> list[str]:
+    prefs = qbit_request("/api/v2/app/preferences")
+    if not isinstance(prefs, dict):
+        return ["qbit: could not read preferences"]
+
+    changes = {
+        key: value
+        for key, value in QBIT_PREFS.items()
+        if prefs.get(key) != value
+    }
+    mode = qbit_text("/api/v2/transfer/speedLimitsMode")
+    mode_change = mode != "0"
+
+    if not changes and not mode_change:
+        return ["qbit: preferences already healthy"]
+
+    lines = []
+    if changes:
+        names = ", ".join(sorted(changes))
+        lines.append(f"qbit: {'would update' if dry_run else 'updating'} preferences: {names}")
+        if not dry_run:
+            qbit_post_json("/api/v2/app/setPreferences", changes)
+    if mode_change:
+        lines.append(f"qbit: {'would disable' if dry_run else 'disabling'} alternative speed limits")
+        if not dry_run:
+            qbit_request("/api/v2/transfer/toggleSpeedLimitsMode", method="POST")
+    return lines
 
 
 def qbit_request(path: str, params: dict[str, Any] | None = None, method: str = "GET") -> Any:
@@ -335,6 +408,8 @@ def main() -> int:
     now = datetime.now(timezone.utc)
     apps = args.app or ["sonarr", "radarr"]
     try:
+        for line in ensure_qbit_preferences(args.dry_run):
+            print(line, flush=True)
         if not args.no_promote:
             for line in promote_recent(apps, args.dry_run, now):
                 print(line, flush=True)

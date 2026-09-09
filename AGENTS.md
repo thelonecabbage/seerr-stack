@@ -146,6 +146,8 @@ The rescue script must stay conservative:
 - Group duplicate queue rows by download ID.
 - Treat qBittorrent metadata-only downloads as stale candidates when Sonarr/Radarr report them as stuck.
 - Treat completed executable payloads as unsafe failures.
+- Restore qBittorrent queue, connection, and speed-limit settings before deciding what is stuck.
+- Disable qBittorrent alternate speed-limit mode before evaluating download health.
 - Do not delete imported media.
 - Do not print API keys or bearer tokens.
 
