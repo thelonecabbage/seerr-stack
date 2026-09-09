@@ -1,0 +1,14 @@
+.env
+*.local
+*.log
+*.tmp
+config/
+downloads/
+media/
+*.db
+*.sqlite
+*.sqlite3
+qBittorrent.conf
+config.xml
+sabnzbd.ini
+
