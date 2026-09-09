@@ -8,4 +8,5 @@ SEERR_RESCUE_SONARR_RELEASE_WINDOW_HOURS=336
 SEERR_RESCUE_RADARR_RECENT_HOURS=4
 SEERR_RESCUE_RADARR_OLD_HOURS=48
 SEERR_RESCUE_RADARR_RELEASE_WINDOW_HOURS=720
+SEERR_RESCUE_CONFIG_DIR=/srv/media-stack/config
 */30 * * * * root /srv/media-stack/scripts/seerr_queue_rescue.py >> /var/log/seerr-queue-rescue.log 2>&1
