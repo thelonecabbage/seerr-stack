@@ -148,6 +148,7 @@ The rescue script must stay conservative:
 - Treat completed executable payloads as unsafe failures.
 - Restore qBittorrent queue, connection, and speed-limit settings before deciding what is stuck.
 - Disable qBittorrent alternate speed-limit mode before evaluating download health.
+- Keep the active-download window wide enough that queued items can try peers instead of waiting behind a small fixed batch.
 - Do not delete imported media.
 - Do not print API keys or bearer tokens.
 

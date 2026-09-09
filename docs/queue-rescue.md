@@ -6,6 +6,7 @@ The script:
 
 - restores healthy qBittorrent queue, connection, and speed-limit settings;
 - disables qBittorrent alternate speed-limit mode if it is active;
+- keeps a wider active-download window so queued items can try peers sooner;
 - promotes recent Sonarr/Radarr releases to top qBittorrent priority;
 - detects stalled torrent queue groups;
 - removes failed/stale downloads from the client;
