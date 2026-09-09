@@ -162,6 +162,17 @@ def qbit_text(path: str) -> str:
         return response.read().decode().strip()
 
 
+def qbit_torrents_by_hash() -> dict[str, dict[str, Any]]:
+    torrents = qbit_request("/api/v2/torrents/info")
+    if not isinstance(torrents, list):
+        return {}
+    return {
+        str(torrent.get("hash")).lower(): torrent
+        for torrent in torrents
+        if torrent.get("hash")
+    }
+
+
 def ensure_qbit_preferences(dry_run: bool) -> list[str]:
     prefs = qbit_request("/api/v2/app/preferences")
     if not isinstance(prefs, dict):
@@ -285,7 +296,32 @@ def status_text(item: dict[str, Any]) -> str:
     return " ".join(parts).lower()
 
 
-def is_candidate(app: str, item: dict[str, Any], recent_hours: int, old_hours: int, release_window_hours: int, now: datetime) -> tuple[bool, str]:
+def qbit_dead_wait(torrent: dict[str, Any] | None) -> bool:
+    if not torrent:
+        return False
+    state = torrent.get("state")
+    if state not in {"queuedDL", "stalledDL", "metaDL"}:
+        return False
+    if (torrent.get("progress") or 0) > 0:
+        return False
+    if (torrent.get("dlspeed") or 0) > 0:
+        return False
+    if (torrent.get("num_seeds") or 0) > 0:
+        return False
+    if (torrent.get("availability") or 0) > 0:
+        return False
+    return torrent.get("eta") in (None, -1, 8640000)
+
+
+def is_candidate(
+    app: str,
+    item: dict[str, Any],
+    recent_hours: int,
+    old_hours: int,
+    release_window_hours: int,
+    now: datetime,
+    qbit_torrent: dict[str, Any] | None,
+) -> tuple[bool, str]:
     if item.get("protocol") != "torrent":
         return False, "not-torrent"
     if item.get("downloadClient") != "qBittorrent":
@@ -298,8 +334,6 @@ def is_candidate(app: str, item: dict[str, Any], recent_hours: int, old_hours: i
         return True, f"unsafe_executable=True age={age:.1f}h"
 
     metadata_only = "downloading metadata" in text
-    if item.get("sizeleft") == 0 and not metadata_only:
-        return False, "nothing-left"
 
     stale_signal = any(term in text for term in STALE_TERMS)
     no_eta = item.get("timeleft") in (None, "", "00:00:00")
@@ -307,6 +341,11 @@ def is_candidate(app: str, item: dict[str, Any], recent_hours: int, old_hours: i
 
     recent = is_recent_release(app, item, now, release_window_hours)
     threshold = recent_hours if recent else old_hours
+    if qbit_dead_wait(qbit_torrent) and age >= threshold:
+        state = qbit_torrent.get("state") if qbit_torrent else "unknown"
+        return True, f"age={age:.1f}h threshold={threshold}h recent_release={recent} qbit_state={state} qbit_no_peers=True"
+    if item.get("sizeleft") == 0 and not metadata_only:
+        return False, "nothing-left"
     if warning and (metadata_only or stale_signal or no_eta) and age >= threshold:
         return True, f"age={age:.1f}h threshold={threshold}h recent_release={recent} metadata_only={metadata_only}"
     return False, f"age={age:.1f}h threshold={threshold}h recent_release={recent}"
@@ -367,10 +406,13 @@ def rescue(app: str, dry_run: bool, now: datetime) -> list[str]:
     recent_hours = env_int(meta["recent_hours_env"], meta["default_recent_hours"])
     old_hours = env_int(meta["old_hours_env"], meta["default_old_hours"])
     release_window = env_int(meta["release_window_env"], meta["default_release_window"])
+    qbit_torrents = qbit_torrents_by_hash()
 
     grouped: OrderedDict[str, dict[str, Any]] = OrderedDict()
     for item in sorted(queue_records(app), key=lambda x: parse_time(x.get("added")) or datetime.min.replace(tzinfo=timezone.utc), reverse=True):
-        ok, reason = is_candidate(app, item, recent_hours, old_hours, release_window, now)
+        h = download_hash(item)
+        qbit_torrent = qbit_torrents.get(h or "")
+        ok, reason = is_candidate(app, item, recent_hours, old_hours, release_window, now, qbit_torrent)
         if not ok:
             continue
         download_id = item.get("downloadId") or str(item.get("id"))
