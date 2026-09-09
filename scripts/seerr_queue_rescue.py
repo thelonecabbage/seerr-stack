@@ -24,12 +24,12 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-CONFIG_DIR = Path(os.environ.get("SEERR_RESCUE_CONFIG_DIR", "/srv/media-stack/config"))
+
 
 APPS = {
     "sonarr": {
         "port": 8989,
-        "config": CONFIG_DIR / "sonarr/config.xml",
+        "config": Path("/srv/media-stack/config/sonarr/config.xml"),
         "queue_path": "/api/v3/queue?page=1&pageSize=1000&includeUnknownSeriesItems=true",
         "search_command": "EpisodeSearch",
         "search_key": "episodeIds",
@@ -45,7 +45,7 @@ APPS = {
     },
     "radarr": {
         "port": 7878,
-        "config": CONFIG_DIR / "radarr/config.xml",
+        "config": Path("/srv/media-stack/config/radarr/config.xml"),
         "queue_path": "/api/v3/queue?page=1&pageSize=1000&includeMovie=true",
         "search_command": "MoviesSearch",
         "search_key": "movieIds",
@@ -91,7 +91,7 @@ def api_key(config_path: Path) -> str:
 
 
 def qbit_api_key() -> str:
-    config = CONFIG_DIR / "qbittorrent/qBittorrent/qBittorrent.conf"
+    config = Path("/srv/media-stack/config/qbittorrent/qBittorrent/qBittorrent.conf")
     for line in config.read_text().splitlines():
         if line.startswith("WebUI\\APIKey="):
             return line.split("=", 1)[1].strip()
