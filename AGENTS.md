@@ -17,7 +17,7 @@ Tracked source:
 Never commit runtime config or state:
 
 - `.env`
-- `/opt/media/config`
+- runtime config directories
 - qBittorrent config files
 - Sonarr/Radarr/Prowlarr config XML files
 - Seerr/Jellyseerr databases or app config
@@ -30,23 +30,20 @@ Never commit runtime config or state:
 Default live host:
 
 ```sh
-justin@asimov.local
+${SEERR_STACK_HOST}
 ```
 
 Default live paths:
 
 ```sh
-/home/docker/volumes/portainer_data/_data/compose/6/docker-compose.yml
-/opt/media/scripts/seerr_queue_rescue.py
-/etc/cron.d/seerr-queue-rescue
-/var/log/seerr-queue-rescue.log
+${SEERR_STACK_REMOTE_COMPOSE}
+${SEERR_RESCUE_SCRIPT}
+${SEERR_STACK_REMOTE_CRON}
+${SEERR_RESCUE_LOG}
 ```
 
-The local repository path is normally:
+Keep hostnames, usernames, and live paths in an untracked `.env` or shell environment.
 
-```sh
-/home/justin/Documents/ChatGPT/HomeAssistant/seerr-stack
-```
 
 ## Required Workflow
 
@@ -56,7 +53,7 @@ For every automated install, fix, or update:
 2. Back up any live file before replacing it.
 3. Change the repository copy first when practical.
 4. Run validation locally.
-5. Install the changed file on Asimov.
+5. Install the changed file on the Docker host.
 6. Verify the live service or script behavior.
 7. Pull the live state back into the repository if the live copy was edited directly.
 8. Run `gitleaks detect`.
@@ -93,40 +90,30 @@ If `gitleaks` reports a finding, do not commit or push. Remove the secret, rotat
 Install the rescue script:
 
 ```sh
-scp scripts/seerr_queue_rescue.py justin@asimov.local:/tmp/seerr_queue_rescue.py
-ssh justin@asimov.local 'sudo cp /opt/media/scripts/seerr_queue_rescue.py /opt/media/scripts/seerr_queue_rescue.py.bak-$(date +%Y%m%d-%H%M%S) && sudo install -m 0755 /tmp/seerr_queue_rescue.py /opt/media/scripts/seerr_queue_rescue.py'
+scp scripts/seerr_queue_rescue.py "$SEERR_STACK_HOST:/tmp/seerr_queue_rescue.py"
+ssh "$SEERR_STACK_HOST" 'sudo cp "$SEERR_RESCUE_SCRIPT" "$SEERR_RESCUE_SCRIPT.bak-$(date +%Y%m%d-%H%M%S)" && sudo install -m 0755 /tmp/seerr_queue_rescue.py "$SEERR_RESCUE_SCRIPT"'
 ```
 
 Install the cron entry:
 
 ```sh
-scp cron/seerr-queue-rescue justin@asimov.local:/tmp/seerr-queue-rescue
-ssh justin@asimov.local 'sudo cp /etc/cron.d/seerr-queue-rescue /etc/cron.d/seerr-queue-rescue.bak-$(date +%Y%m%d-%H%M%S) && sudo install -m 0644 /tmp/seerr-queue-rescue /etc/cron.d/seerr-queue-rescue'
+scp cron/seerr-queue-rescue "$SEERR_STACK_HOST:/tmp/seerr-queue-rescue"
+ssh "$SEERR_STACK_HOST" 'sudo cp "$SEERR_STACK_REMOTE_CRON" "$SEERR_STACK_REMOTE_CRON.bak-$(date +%Y%m%d-%H%M%S)" && sudo install -m 0644 /tmp/seerr-queue-rescue "$SEERR_STACK_REMOTE_CRON"'
 ```
 
 Validate the live rescue script:
 
 ```sh
-ssh justin@asimov.local '/opt/media/scripts/seerr_queue_rescue.py --dry-run'
+ssh "$SEERR_STACK_HOST" '"$SEERR_RESCUE_SCRIPT" --dry-run'
 ```
 
-Deploy Compose changes through Portainer when possible. If using Docker Compose directly, validate on Asimov first:
+Deploy Compose changes through Portainer when possible. If using Docker Compose directly, validate on the Docker host first:
 
 ```sh
-ssh justin@asimov.local 'cd /home/docker/volumes/portainer_data/_data/compose/6 && sudo docker compose config'
+ssh "$SEERR_STACK_HOST" 'cd "$SEERR_STACK_COMPOSE_DIR" && sudo docker compose config'
 ```
 
 Back up the live Compose file before replacing it.
-
-## Sync From Asimov
-
-Use this helper after live edits or before committing if there is any chance the live stack changed:
-
-```sh
-tools/sync_from_asimov.sh
-```
-
-The helper fetches the live Compose file, cron file, and rescue script from Asimov, runs `gitleaks detect`, and commits changed tracked files if the scan passes.
 
 ## Queue Rescue Rules
 
@@ -152,4 +139,3 @@ git push origin main
 ```
 
 Never force-push unless the user explicitly requests it after being told what will be overwritten.
-
