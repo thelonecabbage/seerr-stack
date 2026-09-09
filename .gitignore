@@ -11,4 +11,4 @@ media/
 qBittorrent.conf
 config.xml
 sabnzbd.ini
-tools/sync_from_asimov.sh
+tools/sync_from_*.sh

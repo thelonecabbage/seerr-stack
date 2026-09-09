@@ -12,11 +12,12 @@ Tracked source:
 - `cron/seerr-queue-rescue`
 - `README.md`
 - `docs/`
-- `tools/`
+- public-safe helper files under `tools/`, if any
 
 Never commit runtime config or state:
 
 - `.env`
+- local sync helpers such as `tools/sync_from_*.sh`
 - runtime config directories
 - qBittorrent config files
 - Sonarr/Radarr/Prowlarr config XML files
@@ -24,25 +25,30 @@ Never commit runtime config or state:
 - SABnzbd config
 - API keys, passwords, tokens, cookies, Usenet credentials, indexer credentials, or proxy credentials
 - downloader state, torrent files, downloads, and media
+- local usernames, hostnames, internal machine names, or live absolute paths
 
 ## Hosts And Paths
 
-Default live host:
+The live host and live paths are deployment settings, not public source. Reference them through environment variables only:
 
 ```sh
 ${SEERR_STACK_HOST}
-```
-
-Default live paths:
-
-```sh
 ${SEERR_STACK_REMOTE_COMPOSE}
+${SEERR_STACK_COMPOSE_DIR}
 ${SEERR_RESCUE_SCRIPT}
 ${SEERR_STACK_REMOTE_CRON}
 ${SEERR_RESCUE_LOG}
 ```
 
-Keep hostnames, usernames, and live paths in an untracked `.env` or shell environment.
+Keep the real values in an untracked `.env` or shell environment. `.env.example` must contain the same variable names with safe placeholder values only.
+
+Before committing, check the tracked tree for local identifiers. Use a deployment-local pattern file or shell variable from outside Git, for example:
+
+```sh
+git grep -n -i -f "$SEERR_STACK_PRIVATE_PATTERNS" -- . ':!LICENSE'
+```
+
+The command should return no matches.
 
 
 ## Required Workflow
@@ -56,9 +62,11 @@ For every automated install, fix, or update:
 5. Install the changed file on the Docker host.
 6. Verify the live service or script behavior.
 7. Pull the live state back into the repository if the live copy was edited directly.
-8. Run `gitleaks detect`.
-9. Commit the repository change.
-10. Push `main` to `origin`.
+8. Scrub host-specific values from tracked files.
+9. Ensure `.env.example` safely mirrors the key set of `.env`.
+10. Run `gitleaks detect`.
+11. Commit the repository change.
+12. Push `main` to `origin`.
 
 Do not finish with uncommitted stack or script changes unless the user explicitly asks to stop before committing.
 
@@ -67,9 +75,17 @@ Do not finish with uncommitted stack or script changes unless the user explicitl
 Before committing, run:
 
 ```sh
-docker compose config >/tmp/seerr-stack-compose-config.out
+docker compose --env-file .env.example config >/tmp/seerr-stack-compose-config.out
 python3 -m py_compile scripts/seerr_queue_rescue.py
 ```
+
+If a local `.env` exists, verify `.env.example` has the same variable names without copying private values:
+
+```sh
+comm -3 <(awk -F= '/^[A-Za-z_][A-Za-z0-9_]*=/{print $1}' .env | sort) <(awk -F= '/^[A-Za-z_][A-Za-z0-9_]*=/{print $1}' .env.example | sort)
+```
+
+The command should print nothing.
 
 Then run a secret scan:
 
@@ -114,6 +130,12 @@ ssh "$SEERR_STACK_HOST" 'cd "$SEERR_STACK_COMPOSE_DIR" && sudo docker compose co
 ```
 
 Back up the live Compose file before replacing it.
+
+## Local-Only Sync Helpers
+
+Local sync helpers matching `tools/sync_from_*.sh` are intentionally ignored and must not be added to GitHub. A local sync helper may exist on the workstation, but it must source hostnames, usernames, and live paths from `.env`; it must not hardcode private deployment details.
+
+When a live sync changes tracked files, scrub the result before committing. Live paths from Portainer exports should become `.env` variables or generic placeholder defaults.
 
 ## Queue Rescue Rules
 
