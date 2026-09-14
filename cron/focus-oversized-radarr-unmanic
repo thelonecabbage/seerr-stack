@@ -1,0 +1,14 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+OVERSIZED_RADARR_CONFIG_DIR=/srv/media-stack/config
+OVERSIZED_RADARR_URL=http://127.0.0.1:7878/api/v3
+OVERSIZED_RADARR_MOVIES_PREFIX=/movies/
+OVERSIZED_UNMANIC_MOVIES_PREFIX=/media/movies/
+OVERSIZED_UNMANIC_DB=/srv/unmanic/config/config/unmanic.db
+OVERSIZED_RADARR_UNMANIC_STATE=/var/lib/focus-oversized-radarr-unmanic/state.json
+OVERSIZED_MIN_FILE_AGE_SECONDS=1800
+OVERSIZED_STABILITY_SECONDS=20
+OVERSIZED_UNMANIC_LIBRARY_ID=1
+OVERSIZED_UNMANIC_PRIORITY_BOOST=1000000
+
+*/15 * * * * root /srv/media-stack/scripts/focus_oversized_radarr_unmanic.py >> /var/log/focus-oversized-radarr-unmanic.log 2>&1

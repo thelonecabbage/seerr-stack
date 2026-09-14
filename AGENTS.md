@@ -10,8 +10,10 @@ Tracked source:
 - `.env.example`
 - `scripts/seerr_queue_rescue.py`
 - `scripts/plex_qbit_speed_guard.py`
+- `scripts/focus_oversized_radarr_unmanic.py`
 - `cron/seerr-queue-rescue`
 - `cron/plex-qbit-speed-guard`
+- `cron/focus-oversized-radarr-unmanic`
 - `logrotate/plex-qbit-speed-guard`
 - `README.md`
 - `docs/`
@@ -81,6 +83,7 @@ Before committing, run:
 docker compose --env-file .env.example config >/tmp/seerr-stack-compose-config.out
 python3 -m py_compile scripts/seerr_queue_rescue.py
 python3 -m py_compile scripts/plex_qbit_speed_guard.py
+python3 -m py_compile scripts/focus_oversized_radarr_unmanic.py
 ```
 
 If a local `.env` exists, verify `.env.example` has the same variable names without copying private values:

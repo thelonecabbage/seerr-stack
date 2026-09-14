@@ -10,8 +10,10 @@ This repository is intended to store deployable stack code and scripts only. Run
 - `.env.example`: host-specific values to copy into an untracked `.env`.
 - `scripts/seerr_queue_rescue.py`: qBittorrent/Sonarr/Radarr queue rescue automation.
 - `scripts/plex_qbit_speed_guard.py`: Plex-aware qBittorrent alternative-speed guard.
+- `scripts/focus_oversized_radarr_unmanic.py`: oversized Radarr movie import tracker that prioritizes final copied files in Unmanic.
 - `cron/seerr-queue-rescue`: cron entry that runs the rescue script every 30 minutes on the Docker host.
 - `cron/plex-qbit-speed-guard`: cron entry that runs the Plex/qBittorrent speed guard every minute.
+- `cron/focus-oversized-radarr-unmanic`: cron entry that runs the oversized Radarr/Unmanic watcher every 15 minutes.
 - `logrotate/plex-qbit-speed-guard`: log rotation policy for the speed guard.
 
 ## Deploy
@@ -40,6 +42,15 @@ This repository is intended to store deployable stack code and scripts only. Run
    ```
 
 See `docs/plex-qbit-speed-guard.md` for behavior, validation, and rollback.
+
+7. Install the oversized Radarr/Unmanic watcher:
+
+   ```sh
+   sudo install -m 0755 scripts/focus_oversized_radarr_unmanic.py "$SEERR_STACK_REMOTE_OVERSIZED_UNMANIC_SCRIPT"
+   sudo install -m 0644 cron/focus-oversized-radarr-unmanic "$SEERR_STACK_REMOTE_OVERSIZED_UNMANIC_CRON"
+   ```
+
+See `docs/focus-oversized-radarr-unmanic.md` for behavior, validation, and rollback.
 
 ## Secret Rules
 
