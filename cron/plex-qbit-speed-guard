@@ -1,0 +1,3 @@
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+* * * * * root /usr/bin/python3 /srv/media-stack/scripts/plex_qbit_speed_guard.py >> /var/log/plex-qbit-speed-guard.log 2>&1

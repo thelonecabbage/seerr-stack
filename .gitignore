@@ -8,6 +8,8 @@ media/
 *.db
 *.sqlite
 *.sqlite3
+__pycache__/
+*.pyc
 qBittorrent.conf
 config.xml
 sabnzbd.ini

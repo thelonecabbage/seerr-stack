@@ -1,0 +1,8 @@
+/var/log/plex-qbit-speed-guard.log {
+    su root root
+    weekly
+    rotate 8
+    compress
+    missingok
+    notifempty
+}

@@ -9,7 +9,10 @@ Tracked source:
 - `docker-compose.yml`
 - `.env.example`
 - `scripts/seerr_queue_rescue.py`
+- `scripts/plex_qbit_speed_guard.py`
 - `cron/seerr-queue-rescue`
+- `cron/plex-qbit-speed-guard`
+- `logrotate/plex-qbit-speed-guard`
 - `README.md`
 - `docs/`
 - public-safe helper files under `tools/`, if any
@@ -77,6 +80,7 @@ Before committing, run:
 ```sh
 docker compose --env-file .env.example config >/tmp/seerr-stack-compose-config.out
 python3 -m py_compile scripts/seerr_queue_rescue.py
+python3 -m py_compile scripts/plex_qbit_speed_guard.py
 ```
 
 If a local `.env` exists, verify `.env.example` has the same variable names without copying private values:
